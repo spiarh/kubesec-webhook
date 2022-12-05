@@ -30,7 +30,7 @@ webhooks:
         kubesec-validation: enabled
     sideEffects: None
     timeoutSeconds: 15
-    admissionReviewVersions: ["v1beta1"]
+    admissionReviewVersions: ["v1"]
   - name: daemonset.admission.kubesc.io
     clientConfig:
       service:
@@ -54,7 +54,7 @@ webhooks:
         kubesec-validation: enabled
     sideEffects: None
     timeoutSeconds: 15
-    admissionReviewVersions: ["v1beta1"]
+    admissionReviewVersions: ["v1"]
   - name: statefulset.admission.kubesc.io
     clientConfig:
       service:
@@ -78,4 +78,4 @@ webhooks:
         kubesec-validation: enabled
     sideEffects: None
     timeoutSeconds: 15
-    admissionReviewVersions: ["v1beta1"]
+    admissionReviewVersions: ["v1"]

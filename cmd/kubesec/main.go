@@ -8,13 +8,18 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-	
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	whhttp "github.com/slok/kubewebhook/pkg/http"
-	"github.com/slok/kubewebhook/pkg/log"
-	"github.com/slok/kubewebhook/pkg/observability/metrics"
-	
+	"github.com/sirupsen/logrus"
+	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
+	"github.com/slok/kubewebhook/v2/pkg/log"
+	kwhlogrus "github.com/slok/kubewebhook/v2/pkg/log/logrus"
+	kwhwebhook "github.com/slok/kubewebhook/v2/pkg/webhook"
+
+	// "github.com/slok/kubewebhook/v2/pkg/metrics/prometheus"
+	kwhprometheus "github.com/slok/kubewebhook/v2/pkg/metrics/prometheus"
+
 	"github.com/controlplaneio/kubesec-webhook/pkg/webhook"
 )
 
@@ -63,59 +68,79 @@ type Main struct {
 
 // Run will run the main program.
 func (m *Main) Run() error {
-
-	m.logger = &log.Std{
-		Debug: m.flags.Debug,
+	// Logging
+	logrusLogEntry := logrus.NewEntry(logrus.New())
+	if m.flags.Debug {
+		logrusLogEntry.Logger.SetLevel(logrus.DebugLevel)
 	}
+	m.logger = kwhlogrus.NewLogrus(logrusLogEntry)
 
 	// Register metrics
 	promReg := prometheus.NewRegistry()
-	metricsRec := metrics.NewPrometheus(promReg)
+	metricsRec, err := kwhprometheus.NewRecorder(kwhprometheus.RecorderConfig{Registry: promReg})
+	if err != nil {
+		return fmt.Errorf("could not create Prometheus metrics recorder: %w", err)
+	}
 
-	// Create webhooks
-	pw, err := webhook.NewPodWebhook(m.flags.MinScore, metricsRec, m.logger)
+	// Pods
+	podWebhook, err := webhook.NewPodWebhook(m.flags.MinScore, m.logger)
 	if err != nil {
 		return err
 	}
-	pwd, err := whhttp.HandlerFor(pw)
+
+	podHandler, err := kwhhttp.HandlerFor(kwhhttp.HandlerConfig{
+		Webhook: kwhwebhook.NewMeasuredWebhook(metricsRec, podWebhook),
+		Logger:  m.logger})
+	if err != nil {
+		return fmt.Errorf("error creating pod webhook handler: %w", err)
+	}
+
+	// Deployments
+	deploymentWebhook, err := webhook.NewDeploymentWebhook(m.flags.MinScore, m.logger)
 	if err != nil {
 		return err
 	}
-	vdw, err := webhook.NewDeploymentWebhook(m.flags.MinScore, metricsRec, m.logger)
+	deploymentHandler, err := kwhhttp.HandlerFor(kwhhttp.HandlerConfig{
+		Webhook: kwhwebhook.NewMeasuredWebhook(metricsRec, deploymentWebhook),
+		Logger:  m.logger})
+	if err != nil {
+		return fmt.Errorf("error creating deployment webhook handler: %w", err)
+	}
+
+	// DaemonSets
+	daemonSetWebhook, err := webhook.NewDaemonSetWebhook(m.flags.MinScore, m.logger)
 	if err != nil {
 		return err
 	}
-	vdwh, err := whhttp.HandlerFor(vdw)
+	daemonSetHandler, err := kwhhttp.HandlerFor(kwhhttp.HandlerConfig{
+		Webhook: kwhwebhook.NewMeasuredWebhook(metricsRec, daemonSetWebhook),
+		Logger:  m.logger})
+	if err != nil {
+		return fmt.Errorf("error creating daemonset webhook handler: %w", err)
+	}
+
+	// StatefulSets
+	statefulSetWebhook, err := webhook.NewStatefulSetWebhook(m.flags.MinScore, m.logger)
 	if err != nil {
 		return err
 	}
-	dw, err := webhook.NewDaemonSetWebhook(m.flags.MinScore, metricsRec, m.logger)
+	statefulSetHandler, err := kwhhttp.HandlerFor(kwhhttp.HandlerConfig{
+		Webhook: kwhwebhook.NewMeasuredWebhook(metricsRec, statefulSetWebhook),
+		Logger:  m.logger})
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating statefulset webhook handler: %w", err)
 	}
-	dwd, err := whhttp.HandlerFor(dw)
-	if err != nil {
-		return err
-	}
-	sw, err := webhook.NewStatefulSetWebhook(m.flags.MinScore, metricsRec, m.logger)
-	if err != nil {
-		return err
-	}
-	swd, err := whhttp.HandlerFor(sw)
-	if err != nil {
-		return err
-	}
+
 	errC := make(chan error)
 
 	// Serve webhooks
 	go func() {
-
 		m.logger.Infof("webhooks listening on %s...", m.flags.ListenAddress)
 		mux := http.NewServeMux()
-		mux.Handle("/pod", pwd)
-		mux.Handle("/deployment", vdwh)
-		mux.Handle("/daemonset", dwd)
-		mux.Handle("/statefulset", swd)
+		mux.Handle("/pod", podHandler)
+		mux.Handle("/deployment", deploymentHandler)
+		mux.Handle("/daemonset", daemonSetHandler)
+		mux.Handle("/statefulset", statefulSetHandler)
 		errC <- http.ListenAndServeTLS(
 			m.flags.ListenAddress,
 			m.flags.CertFile,
@@ -177,5 +202,4 @@ func main() {
 		os.Exit(1)
 	}
 	os.Exit(0)
-
 }

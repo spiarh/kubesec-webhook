@@ -4,7 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/slok/kubewebhook/pkg/log"
+	"github.com/sirupsen/logrus"
+	kwhlogrus "github.com/slok/kubewebhook/v2/pkg/log/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -75,13 +76,16 @@ spec:
 		},
 	}
 	for _, tt := range tests {
-
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+
+			logrusLogEntry := logrus.NewEntry(logrus.New())
+			logger := kwhlogrus.NewLogrus(logrusLogEntry)
+
 			pv := podValidator{
 				minScore: tt.minScore,
-				logger:   log.Dummy,
+				logger:   logger,
 			}
 
 			decoder := serializer.NewCodecFactory(scheme.Scheme).UniversalDecoder()
@@ -92,7 +96,7 @@ spec:
 				t.Fatalf("unable to convert %q into Pod object - %v", tt.podSpec, err)
 			}
 
-			_, resp, err := pv.Validate(context.Background(), pod)
+			resp, err := pv.Validate(context.Background(), nil, pod)
 
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("Pod Validator - got error %v, but wanted %v", err, tt.wantErr)
@@ -104,7 +108,6 @@ spec:
 			if got != want {
 				t.Fatalf("Pod Validator - result mismatch, want=%v, got=%v", want, got)
 			}
-
 		})
 	}
 }

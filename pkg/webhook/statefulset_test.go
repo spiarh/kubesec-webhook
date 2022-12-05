@@ -4,7 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/slok/kubewebhook/pkg/log"
+	"github.com/sirupsen/logrus"
+	kwhlogrus "github.com/slok/kubewebhook/v2/pkg/log/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -98,14 +99,16 @@ spec:
 		},
 	}
 	for _, tt := range tests {
-
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
+			logrusLogEntry := logrus.NewEntry(logrus.New())
+			logger := kwhlogrus.NewLogrus(logrusLogEntry)
+
 			pv := statefulSetValidator{
 				minScore: tt.minScore,
-				logger:   log.Dummy,
+				logger:   logger,
 			}
 
 			decoder := serializer.NewCodecFactory(scheme.Scheme).UniversalDecoder()
@@ -116,7 +119,7 @@ spec:
 				t.Fatalf("unable to convert %q into StatefulSet object - %v", tt.statefulsetSpec, err)
 			}
 
-			_, resp, err := pv.Validate(context.Background(), deploy)
+			resp, err := pv.Validate(context.Background(), nil, deploy)
 
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("Statefulset validator - got error %v, but wanted %v", err, tt.wantErr)
@@ -129,7 +132,6 @@ spec:
 				t.Fatalf("Statefulset validator - result mismatch, want=%v, got=%v", want, got)
 				return
 			}
-
 		})
 	}
 }
