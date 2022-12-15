@@ -15,7 +15,11 @@ push:
 
 .PHONY: test
 test:
-	cd pkg/webhook ; go test -v -race ./...
+	go test -v -race ./...
+
+.PHONY: test-e2e
+test-e2e:
+	cd tests/e2e/ && go test -v
 
 .PHONY: certs
 certs:

@@ -23,7 +23,7 @@ import (
 
 // Defaults.
 const (
-	lAddressDef     = ":8080"
+	lAddressDef     = ":8443"
 	lMetricsAddress = ":8081"
 	debugDef        = false
 	gracePeriod     = 10 * time.Second
@@ -97,14 +97,14 @@ func (m *Main) Run() error {
 		Webhook: kwhwebhook.NewMeasuredWebhook(metricsRec, wh),
 		Logger:  m.logger})
 	if err != nil {
-		return fmt.Errorf("error creating pod webhook handler: %w", err)
+		return fmt.Errorf("error creating webhook handler: %w", err)
 	}
 
 	errC := make(chan error)
 
-	// Serve webhooks
+	// Serve webhook
 	go func() {
-		m.logger.Infof("webhooks listening on %s...", m.flags.ListenAddress)
+		m.logger.Infof("webhook listening on %s...", m.flags.ListenAddress)
 		mux := http.NewServeMux()
 		mux.Handle("/", handler)
 		errC <- http.ListenAndServeTLS(
