@@ -9,7 +9,7 @@ metadata:
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
 spec:
-  replicas: {{ .Values.replicaCount }}
+  replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ include "kubesec-webhook.name" . }}
@@ -23,29 +23,32 @@ spec:
     spec:
       containers:
         - name: {{ .Chart.Name }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag }}"
+          imagePullPolicy: {{ .Values.server.image.pullPolicy }}
           command:
             - ./kubesec
           args:
             - -tls-cert-file=/etc/webhook/certs/cert.pem
             - -tls-key-file=/etc/webhook/certs/key.pem
-            - -min-score=0
+            - -min-score={{- .Values.config.minScore }}
+          {{- if .Values.config.debug }}
             - -debug
+          {{- end }}
           securityContext:
             readOnlyRootFilesystem: true
             runAsNonRoot: true
-            runAsUser: 10001
+            runAsUser: {{ .Values.server.runAsUser }}
             capabilities:
               drop:
               - all
               add:
               - NET_BIND_SERVICE
           ports:
-            - name: http
-              containerPort: 80
-              containerPort: 8080
+            - name: metrics
               containerPort: 8081
+              protocol: TCP
+            - name: http
+              containerPort: {{ .Values.server.port }}
               protocol: TCP
           livenessProbe:
             httpGet:
@@ -76,4 +79,4 @@ spec:
       volumes:
       - name: webhook-certs
         secret:
-          secretName: {{ include "kubesec-webhook.fullname" . }} 
+          secretName: {{ include "kubesec-webhook.fullname" . }}
