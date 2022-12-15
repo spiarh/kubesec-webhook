@@ -1,24 +1,25 @@
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: DaemonSet
 metadata:
-  name: deployment-test
+  name: fluentd-elasticsearch
+  namespace: kube-system
+  labels:
+    k8s-app: fluentd-logging
 spec:
   selector:
     matchLabels:
-      app: nginx
-  replicas: 1
+      name: fluentd-elasticsearch
   template:
     metadata:
       labels:
-        app: nginx
+        name: fluentd-elasticsearch
     spec:
       containers:
-      - name: main-container
-        image: quay.io/fluentd_elasticsearch/fluentd:v2.5.2
+      - name: fluentd-elasticsearch
+        image: registry.k8s.io/pause:3.7
         securityContext:
           readOnlyRootFilesystem: false
-          runAsUser: 100
           runAsNonRoot: false
           privileged: true
           allowPrivilegeEscalation: true

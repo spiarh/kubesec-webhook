@@ -1,25 +1,25 @@
 ---
 apiVersion: apps/v1
-kind: DaemonSet
+kind: StatefulSet
 metadata:
-  name: fluentd-elasticsearch
-  namespace: kube-system
-  labels:
-    k8s-app: fluentd-logging
+  name: web
 spec:
   selector:
     matchLabels:
-      name: fluentd-elasticsearch
+      app: insecure-statefulset
+  serviceName: "statefulset-test-sa"
+  replicas: 2
   template:
     metadata:
       labels:
-        name: fluentd-elasticsearch
+        app: insecure-statefulset
     spec:
       containers:
-      - name: fluentd-elasticsearch
-        image: quay.io/fluentd_elasticsearch/fluentd:v2.5.2
+      - name: main-container
+        image: registry.k8s.io/pause:3.7
         securityContext:
           readOnlyRootFilesystem: false
+          runAsUser: 0
           runAsNonRoot: false
           privileged: true
           allowPrivilegeEscalation: true

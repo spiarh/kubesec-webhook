@@ -1,21 +1,22 @@
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
-  name: hardened-deployment
+  name: hardened-statefulset
 spec:
   selector:
     matchLabels:
-      app: foo
-  replicas: 1
+      app: hardened-statefulset
+  serviceName: "statefulset-test-sa"
+  replicas: 2
   template:
     metadata:
       labels:
-        app: foo
+        app: hardened-statefulset
     spec:
       containers:
       - name: main-container
-        image: quay.io/fluentd_elasticsearch/fluentd:v2.5.2
+        image: registry.k8s.io/pause:3.7
         securityContext:
           readOnlyRootFilesystem: true
           runAsUser: 100
@@ -27,7 +28,7 @@ spec:
             - "ALL"
         resources:
           limits:
-            memory: 200Mi
+            memory: 20Mi
           requests:
-            cpu: 100m
-            memory: 200Mi
+            cpu: 10m
+            memory: 20Mi

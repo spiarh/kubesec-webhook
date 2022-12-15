@@ -28,54 +28,56 @@ type testCase struct {
 // TestValidate - tests the validation of hardened and insecure YAML manifests
 // The hardened manifest should be allowed by the webhook and the insecure should be blocked
 func TestValidate(t *testing.T) {
+	testDataPath := filepath.Join("..", "..", "tests", "testdata")
+
 	tests := []testCase{
 		{
 			name:         "Hardened DaemonSet Spec",
 			valid:        true,
 			minScore:     0,
-			specFilepath: "./testdata/daemonset-hardened.yaml",
+			specFilepath: "daemonset-hardened.yaml",
 		},
 		{
 			name:         "Insecure DaemonSet Spec",
 			valid:        false,
 			minScore:     0,
-			specFilepath: "./testdata/daemonset-insecure.yaml",
+			specFilepath: "daemonset-insecure.yaml",
 		},
 		{
 			name:         "Hardened Deployment Spec",
 			valid:        true,
 			minScore:     0,
-			specFilepath: "./testdata/deployment-hardened.yaml",
+			specFilepath: "deployment-hardened.yaml",
 		},
 		{
 			name:         "Insecure Deployment Spec",
 			valid:        false,
 			minScore:     0,
-			specFilepath: "./testdata/deployment-insecure.yaml",
+			specFilepath: "deployment-insecure.yaml",
 		},
 		{
 			name:         "Hardened Pod Spec.",
 			valid:        true,
 			minScore:     0,
-			specFilepath: "./testdata/pod-hardened.yaml",
+			specFilepath: "pod-hardened.yaml",
 		},
 		{
 			name:         "Insecure Pod Spec",
 			valid:        false,
 			minScore:     0,
-			specFilepath: "./testdata/pod-insecure.yaml",
+			specFilepath: "pod-insecure.yaml",
 		},
 		{
 			name:         "Hardened Statefulset Spec",
 			valid:        true,
 			minScore:     0,
-			specFilepath: "./testdata/statefulset-hardened.yaml",
+			specFilepath: "statefulset-hardened.yaml",
 		},
 		{
 			name:         "Insecure Statefulset Spec",
 			valid:        false,
 			minScore:     0,
-			specFilepath: "./testdata/statefulset-insecure.yaml",
+			specFilepath: "statefulset-insecure.yaml",
 		},
 		{
 			name: "Unsupported resource",
@@ -83,7 +85,7 @@ func TestValidate(t *testing.T) {
 			valid:            true,
 			minScore:         0,
 			expectedWarnings: 1,
-			specFilepath:     "./testdata/configmap.yaml",
+			specFilepath:     "configmap.yaml",
 		},
 	}
 	for _, tt := range tests {
@@ -91,7 +93,7 @@ func TestValidate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			manifest, err := ioutil.ReadFile(filepath.Clean(tt.specFilepath))
+			manifest, err := ioutil.ReadFile(filepath.Clean(filepath.Join(testDataPath, tt.specFilepath)))
 			if err != nil {
 				t.Fatalf("error opening fixture file: %v", err)
 			}

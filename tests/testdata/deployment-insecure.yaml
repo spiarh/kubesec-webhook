@@ -1,25 +1,24 @@
 ---
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
-  name: web
+  name: deployment-test
 spec:
   selector:
     matchLabels:
-      app: insecure-statefulset
-  serviceName: "statefulset-test-sa"
-  replicas: 2
+      app: nginx
+  replicas: 1
   template:
     metadata:
       labels:
-        app: insecure-statefulset
+        app: nginx
     spec:
       containers:
       - name: main-container
-        image: nginx
+        image: registry.k8s.io/pause:3.7
         securityContext:
           readOnlyRootFilesystem: false
-          runAsUser: 0
+          runAsUser: 100
           runAsNonRoot: false
           privileged: true
           allowPrivilegeEscalation: true
